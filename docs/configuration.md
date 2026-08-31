@@ -1,0 +1,13 @@
+# Configuration
+
+Pass a mapping or `XXLJobConfig` to the constructor or `init_app`. Settings are validated before routes are mounted.
+
+| Group | Keys |
+| --- | --- |
+| Core | `XXL_JOB_ENABLED`, `XXL_JOB_ADMIN_ADDRESSES`, `XXL_JOB_ACCESS_TOKEN`, `XXL_JOB_EXECUTOR_APP_NAME`, `XXL_JOB_EXECUTOR_ADDRESS`, `XXL_JOB_ROUTE_PREFIX` |
+| Registry | `XXL_JOB_AUTO_REGISTER`, `XXL_JOB_DEREGISTER_ON_EXIT`, `XXL_JOB_REGISTRY_INTERVAL` |
+| HTTP | `XXL_JOB_HTTP_CONNECT_TIMEOUT`, `XXL_JOB_HTTP_READ_TIMEOUT`, `XXL_JOB_ADMIN_RETRY_COUNT`, `XXL_JOB_ADMIN_RETRY_BACKOFF`, `XXL_JOB_ADMIN_FAILOVER_ON_HTTP_ERROR`, `XXL_JOB_ADMIN_FAILOVER_ON_INVALID_JSON`, `XXL_JOB_ADMIN_FAILOVER_ON_BUSINESS_ERROR` |
+| Limits | `XXL_JOB_CALLBACK_MESSAGE_MAX_LENGTH`, `XXL_JOB_MAX_REQUEST_SIZE`, `XXL_JOB_MAX_PARAM_LENGTH`, `XXL_JOB_CALLBACK_BATCH_MAX_SIZE` |
+| Logging | `XXL_JOB_LOG_ENABLED`, `XXL_JOB_LOG_FILE_ENABLED`, `XXL_JOB_LOG_CONSOLE_ENABLED`, `XXL_JOB_LOG_LEVEL`, `XXL_JOB_LOG_FORMAT`, `XXL_JOB_LOG_DATE_FORMAT`, `XXL_JOB_LOG_PATH`, `XXL_JOB_LOG_FILENAME`, `XXL_JOB_LOG_ENCODING`, `XXL_JOB_LOG_MAX_BYTES`, `XXL_JOB_LOG_BACKUP_COUNT`, `XXL_JOB_LOG_PROPAGATE` |
+
+Address lists may be strings or sequences. Retry and failover are bounded; business errors are not failed over unless explicitly enabled. `XXL_JOB_ENABLED=False` short-circuits Admin operations and protocol routes with a business failure response.

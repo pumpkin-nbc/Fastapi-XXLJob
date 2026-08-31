@@ -1,0 +1,111 @@
+[build-system]
+requires = ["hatchling>=1.26,<1.32"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fastapi-xxljob"
+dynamic = ["version"]
+description = "A FastAPI extension implementing the XXL-JOB 2.4.1 executor protocol."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+keywords = ["fastapi", "xxl-job", "xxljob", "scheduler", "executor"]
+authors = [
+    { name = "Pumpkin" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "fastapi>=0.124.4,<0.125.0",
+    "requests>=2.25",
+]
+
+[project.optional-dependencies]
+test = [
+    "httpx<0.29",
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+]
+dev = [
+    "build",
+    "httpx<0.29",
+    "mypy>=1.8,<1.15",
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "ruff",
+    "twine",
+    "types-requests",
+]
+
+[project.urls]
+Homepage = "https://github.com/pumpkin-nbc/Fastapi-XXLJob"
+Documentation = "https://github.com/pumpkin-nbc/Fastapi-XXLJob/tree/master/docs"
+Source = "https://github.com/pumpkin-nbc/Fastapi-XXLJob"
+Changelog = "https://github.com/pumpkin-nbc/Fastapi-XXLJob/blob/master/CHANGELOG.md"
+
+[project.scripts]
+fastapi-xxljob = "fastapi_xxljob.cli.commands:main"
+
+[tool.hatch.version]
+path = "fastapi_xxljob/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fastapi_xxljob"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/fastapi_xxljob",
+    "/tests",
+    "/docs",
+    "/examples",
+    "/scripts",
+    "/README.md",
+    "/README.zh-CN.md",
+    "/CHANGELOG.md",
+    "/CHANGELOG.zh-CN.md",
+    "/CONTRIBUTING.md",
+    "/CONTRIBUTING.zh-CN.md",
+    "/SECURITY.md",
+    "/SECURITY.zh-CN.md",
+    "/LICENSE",
+    "/NOTICE",
+    "/pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "official_admin: optional test requiring a disposable XXL-JOB 2.4.1 Admin",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_unused_ignores = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+files = ["fastapi_xxljob"]

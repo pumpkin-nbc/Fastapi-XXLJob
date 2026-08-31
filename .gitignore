@@ -12,9 +12,22 @@ logs/
 
 # python相关文件过滤
 # 过滤所有生成的虚拟环境
+.venv/
 venv/
 # 过滤所有执行产生的临时文件
 __pycache__/
+*.py[cod]
+
+# 测试、类型检查与构建产物
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
 
 # macos相关文件过滤
 # 过滤Finder产生的文件
