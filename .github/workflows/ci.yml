@@ -69,3 +69,22 @@ jobs:
       - run: python -m build
       - run: python -m twine check dist/*
       - run: python scripts/check_package.py --dist-dir dist
+
+  required-ci:
+    runs-on: ubuntu-latest
+    name: Required CI
+    if: ${{ always() }}
+    needs:
+      - quality
+      - fastapi-compatibility
+      - package
+    steps:
+      - name: Require every CI job to pass
+        env:
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          FASTAPI_COMPATIBILITY_RESULT: ${{ needs.fastapi-compatibility.result }}
+          PACKAGE_RESULT: ${{ needs.package.result }}
+        run: |
+          test "$QUALITY_RESULT" = "success"
+          test "$FASTAPI_COMPATIBILITY_RESULT" = "success"
+          test "$PACKAGE_RESULT" = "success"
