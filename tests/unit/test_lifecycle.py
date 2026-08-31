@@ -129,8 +129,21 @@ def test_enabled_protocol_only_does_not_require_admin_configuration():
         },
     )
     assert extension.get_status(app).registry_thread_running is False
-    route_paths = {getattr(route, "path", None) for route in app.routes}
-    assert {"/beat", "/idleBeat", "/run", "/kill", "/log"} <= route_paths
+    with TestClient(app) as client:
+        responses = {
+            "/beat": client.post("/beat"),
+            "/idleBeat": client.post("/idleBeat", json={}),
+            "/run": client.post("/run", json={}),
+            "/kill": client.post("/kill", json={}),
+            "/log": client.post("/log", json={}),
+        }
+    assert responses["/beat"].json()["code"] == 200
+    assert all(response.status_code == 200 for response in responses.values())
+    assert all(
+        response.json()["code"] == 500
+        for path, response in responses.items()
+        if path != "/beat"
+    )
 
 
 @pytest.mark.parametrize("removed_value", [False, True, "false"])

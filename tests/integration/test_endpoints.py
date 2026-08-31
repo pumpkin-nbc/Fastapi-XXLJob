@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from fastapi_xxljob import FastAPIXXLJob, LogResponse, XXLJobResponse
+from fastapi_xxljob._app import ProtocolErrorMiddleware
 from tests.conftest import BASE_CONFIG, make_app
 
 
@@ -260,10 +261,8 @@ def test_oversized_request_is_rejected_before_handler():
 
 
 def test_scoped_middleware_converts_protocol_404():
-    app, _ = make_app()
-    app.router.routes[:] = [
-        route for route in app.router.routes if getattr(route, "path", None) != "/beat"
-    ]
+    app = FastAPI(title="protocol-404")
+    app.add_middleware(ProtocolErrorMiddleware, paths={"/beat"})
     with TestClient(app) as client:
         response = client.post("/beat")
         unrelated = client.post("/not-an-executor-route")
