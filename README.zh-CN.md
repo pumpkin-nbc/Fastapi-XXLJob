@@ -14,7 +14,7 @@
 
 ## 安装
 
-要求 Python 3.8 或更高版本。
+要求 Python 3.8 或更高版本，以及 FastAPI 0.124.4 至 1.0 之前的版本。依赖解析会让 Python 3.8 使用 FastAPI 0.124.4，较新 Python 则可使用更新的 FastAPI 版本。
 
 ```bash
 pip install fastapi-xxljob==0.1.0

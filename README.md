@@ -14,7 +14,7 @@
 
 ## Install
 
-Requires Python 3.8 or later.
+Requires Python 3.8 or later and FastAPI 0.124.4 or later (before 1.0). Dependency resolution keeps Python 3.8 on FastAPI 0.124.4 while newer Python versions can use newer FastAPI releases.
 
 ```bash
 pip install fastapi-xxljob==0.1.0
