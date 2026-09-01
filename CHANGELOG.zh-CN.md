@@ -6,3 +6,4 @@
 - 提供五个协议端点、同步/异步 Handler、lifespan 注册管理、回调、故障转移、状态、日志、CLI、类型标注、文档和示例。
 - 确立 Python 3.8 支持和 Apache-2.0 许可证。
 - 增加 FastAPI 0.124.4、0.125.0 和最新 1.0 之前版本的兼容性测试。
+- 增加通过完整制品校验后发布到 TestPyPI 和 PyPI 的 Trusted Publishing 自动化。

@@ -6,3 +6,4 @@
 - Added five executor endpoints, sync/async handlers, lifespan registry management, callbacks, failover, status, logging, CLI, typing, documentation, and examples.
 - Established Python 3.8 support and Apache-2.0 licensing.
 - Added compatibility testing for FastAPI 0.124.4, 0.125.0, and the latest pre-1.0 release.
+- Added Trusted Publishing automation for validated TestPyPI and PyPI releases.
