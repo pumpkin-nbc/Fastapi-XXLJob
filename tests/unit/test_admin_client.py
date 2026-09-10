@@ -1,0 +1,123 @@
+"""Admin registry client tests."""
+
+from __future__ import annotations
+
+import pytest
+import requests
+
+from fastapi_xxljob.client import ACCESS_TOKEN_HEADER
+from fastapi_xxljob.client.admin_client import (
+    REGISTRY_PATH,
+    REGISTRY_REMOVE_PATH,
+    AdminClient,
+)
+from fastapi_xxljob.config import XXLJobConfig
+from fastapi_xxljob.model.registry import RegistryRequest
+
+
+def make_config(**overrides):
+    mapping = {
+        "XXL_JOB_ADMIN_ADDRESSES": ["http://a:8080", "http://b:8080"],
+        "XXL_JOB_EXECUTOR_APP_NAME": "app",
+        "XXL_JOB_EXECUTOR_ADDRESS": "http://127.0.0.1:5001",
+    }
+    mapping.update(overrides)
+    return XXLJobConfig.from_mapping(mapping)
+
+
+class FakeResponse:
+    def __init__(self, code=200, status_code=200):
+        self.status_code = status_code
+        self._code = code
+
+    def json(self):
+        return {"code": self._code, "msg": "err" if self._code != 200 else None}
+
+
+def test_registry_calls_official_path(mocker):
+    post = mocker.patch("fastapi_xxljob.client.requests.post", return_value=FakeResponse())
+    client = AdminClient(make_config())
+    req = RegistryRequest.for_executor("app", "http://127.0.0.1:5001")
+    result = client.registry(req)
+    assert result.success is True
+    assert post.call_args.args[0].endswith(REGISTRY_PATH)
+    assert post.call_args.kwargs["json"] == req.to_wire()
+    assert post.call_args.kwargs["allow_redirects"] is False
+
+
+def test_registry_remove_calls_official_path(mocker):
+    post = mocker.patch("fastapi_xxljob.client.requests.post", return_value=FakeResponse())
+    client = AdminClient(make_config())
+    client.registry_remove(RegistryRequest.for_executor("app", "http://127.0.0.1:5001"))
+    assert post.call_args.args[0].endswith(REGISTRY_REMOVE_PATH)
+    assert post.call_args.kwargs["allow_redirects"] is False
+
+
+@pytest.mark.parametrize("status", [301, 302, 307, 308])
+def test_registry_redirect_is_http_failure_without_following(mocker, status):
+    post = mocker.patch(
+        "fastapi_xxljob.client.requests.post",
+        return_value=FakeResponse(status_code=status),
+    )
+    client = AdminClient(
+        make_config(XXL_JOB_ADMIN_ADDRESSES=["http://a:8080"])
+    )
+
+    result = client.registry(
+        RegistryRequest.for_executor("app", "http://127.0.0.1:5001")
+    )
+
+    assert result.success is False
+    assert result.error_type == "http"
+    assert result.http_status == status
+    assert post.call_count == 1
+    assert post.call_args.kwargs["allow_redirects"] is False
+
+
+def test_registry_token_header(mocker):
+    post = mocker.patch("fastapi_xxljob.client.requests.post", return_value=FakeResponse())
+    client = AdminClient(make_config(XXL_JOB_ACCESS_TOKEN="tok"))
+    client.registry(RegistryRequest.for_executor("app", "addr"))
+    assert post.call_args.kwargs["headers"][ACCESS_TOKEN_HEADER] == "tok"
+
+
+def test_registry_failover(mocker):
+    post = mocker.patch(
+        "fastapi_xxljob.client.requests.post",
+        side_effect=[requests.ConnectionError("x"), FakeResponse()],
+    )
+    client = AdminClient(make_config())
+    result = client.registry(RegistryRequest.for_executor("app", "addr"))
+    assert result.success is True
+    assert result.address == "http://b:8080"
+    assert post.call_count == 2
+
+
+def test_registry_business_failure(mocker):
+    mocker.patch(
+        "fastapi_xxljob.client.requests.post",
+        return_value=FakeResponse(code=500),
+    )
+    client = AdminClient(make_config(XXL_JOB_ADMIN_ADDRESSES=["http://a:8080"]))
+    result = client.registry(RegistryRequest.for_executor("app", "addr"))
+    assert result.success is False
+    assert result.code == 500
+
+
+def test_disabled_admin_client_never_posts(mocker):
+    post = mocker.patch("fastapi_xxljob.client.requests.post")
+    client = AdminClient(
+        make_config(
+            XXL_JOB_ENABLED=False,
+            XXL_JOB_ADMIN_ADDRESSES=["not a URL"],
+            XXL_JOB_EXECUTOR_ADDRESS="not a URL",
+        )
+    )
+    request = RegistryRequest.for_executor("app", "addr")
+
+    register = client.registry(request)
+    remove = client.registry_remove(request)
+
+    assert register.error_type == remove.error_type == "config"
+    assert register.attempt_count == remove.attempt_count == 0
+    post.assert_not_called()
