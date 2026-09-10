@@ -9,7 +9,9 @@ Releases use GitHub Actions Trusted Publishing. No long-lived PyPI API token is 
 Build into a new empty directory so historical files cannot be mistaken for the current release:
 
 ```powershell
-$buildDir = Join-Path $env:TEMP "fastapi-xxljob-0.1.0-dist"
+$version = .venv\Scripts\python.exe -c `
+  'import runpy; print(runpy.run_path("fastapi_xxljob/_version.py")["__version__"])'
+$buildDir = Join-Path $env:TEMP "fastapi-xxljob-$version-dist"
 Remove-Item -LiteralPath $buildDir -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $buildDir | Out-Null
 .venv\Scripts\python.exe -m build --outdir $buildDir
@@ -18,8 +20,8 @@ New-Item -ItemType Directory -Path $buildDir | Out-Null
 The directory must contain exactly:
 
 ```text
-fastapi_xxljob-0.1.0-py3-none-any.whl
-fastapi_xxljob-0.1.0.tar.gz
+fastapi_xxljob-X.Y.Z-py3-none-any.whl
+fastapi_xxljob-X.Y.Z.tar.gz
 ```
 
 ## Check
@@ -27,9 +29,8 @@ fastapi_xxljob-0.1.0.tar.gz
 ```powershell
 .venv\Scripts\python.exe scripts\check_docs.py
 .venv\Scripts\python.exe scripts\check_package.py --dist-dir $buildDir
-.venv\Scripts\python.exe -m twine check `
-  (Join-Path $buildDir "fastapi_xxljob-0.1.0-py3-none-any.whl") `
-  (Join-Path $buildDir "fastapi_xxljob-0.1.0.tar.gz")
+$artifacts = @(Get-ChildItem -LiteralPath $buildDir -File)
+.venv\Scripts\python.exe -m twine check $artifacts.FullName
 ```
 
 The project validator checks wheel RECORD hashes and sizes, metadata, the standard top-level sdist `PKG-INFO`, required source, typing and legal files, and rejects caches or development directories.
@@ -49,7 +50,7 @@ Create Pending Trusted Publishers on PyPI and TestPyPI with:
 - PyPI environment: `pypi`
 - TestPyPI environment: `testpypi`
 
-Create matching GitHub Environments. The `pypi` environment should require manual approval. Only the publishing jobs receive `id-token: write`; build and validation remain read-only.
+Create matching GitHub Environments. Leave required reviewers disabled for unattended tag publishing, or enable them when a manual production gate is preferred. Only the publishing jobs receive `id-token: write`; build and validation remain read-only.
 
 ## Publish to TestPyPI
 
@@ -59,8 +60,8 @@ Install dependencies from PyPI before installing the package from TestPyPI witho
 
 ```bash
 python -m pip install --index-url https://pypi.org/simple "fastapi>=0.124.4,<1.0" requests
-python -m pip install --index-url https://test.pypi.org/simple --no-deps fastapi-xxljob==0.1.0
-python -c "import fastapi_xxljob; assert fastapi_xxljob.__version__ == '0.1.0'"
+python -m pip install --index-url https://test.pypi.org/simple --no-deps fastapi-xxljob==X.Y.Z
+python -c "import fastapi_xxljob; print(fastapi_xxljob.__version__)"
 fastapi-xxljob --version
 ```
 
@@ -69,11 +70,12 @@ fastapi-xxljob --version
 After Required CI passes on `develop` and `master`, create the release tag from a commit contained in `master`:
 
 ```bash
-git tag -a v0.1.0 -m "Release 0.1.0"
-git push origin v0.1.0
+version="$(python -c 'import runpy; print(runpy.run_path("fastapi_xxljob/_version.py")["__version__"])')"
+git tag -a "v${version}" -m "Release ${version}"
+git push origin "v${version}"
 ```
 
-The tag starts the `Release` workflow. It verifies the tag, package version, both changelogs, and membership in `master`, then waits for the `pypi` environment approval before Trusted Publishing.
+The tag starts the `Release` workflow. It first runs the complete Required CI workflow, then verifies the tag, package version, both changelogs, membership in `master`, and the dynamically discovered wheel and sdist before Trusted Publishing. If the `pypi` environment has required reviewers, publication waits for their approval.
 
 ## Before publishing
 

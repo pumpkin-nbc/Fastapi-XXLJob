@@ -10,8 +10,13 @@ permissions:
   contents: read
 
 jobs:
+  quality-gate:
+    name: Run required CI
+    uses: ./.github/workflows/ci.yml
+
   build:
     name: Build and validate distributions
+    needs: quality-gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,8 +30,39 @@ jobs:
         run: |
           set -euo pipefail
           version="$(python -c 'import runpy; print(runpy.run_path("fastapi_xxljob/_version.py")["__version__"])')"
-          grep -Fqx "## [${version}] - 2026-08-30" CHANGELOG.md
-          grep -Fqx "## [${version}] - 2026-08-30" CHANGELOG.zh-CN.md
+          python - "${version}" <<'PY'
+          import datetime
+          import pathlib
+          import re
+          import sys
+
+          version = sys.argv[1]
+          if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+              raise SystemExit(f"Release version must use X.Y.Z format: {version!r}")
+
+          release_dates = set()
+          pattern = re.compile(
+              rf"^## \[{re.escape(version)}\] - ([0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}})$",
+              re.MULTILINE,
+          )
+          for changelog in ("CHANGELOG.md", "CHANGELOG.zh-CN.md"):
+              text = pathlib.Path(changelog).read_text(encoding="utf-8")
+              matches = pattern.findall(text)
+              if len(matches) != 1:
+                  raise SystemExit(
+                      f"{changelog} must contain exactly one release heading for {version}."
+                  )
+              try:
+                  datetime.date.fromisoformat(matches[0])
+              except ValueError as exc:
+                  raise SystemExit(
+                      f"{changelog} contains an invalid release date: {matches[0]}"
+                  ) from exc
+              release_dates.add(matches[0])
+
+          if len(release_dates) != 1:
+              raise SystemExit("English and Chinese changelog release dates do not match.")
+          PY
           if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
             if [[ "${GITHUB_REF_NAME}" != "v${version}" ]]; then
               echo "Tag ${GITHUB_REF_NAME} does not match package version ${version}." >&2
@@ -49,13 +85,30 @@ jobs:
           rm -rf "${BUILD_DIR}"
           mkdir -p "${BUILD_DIR}"
           python -m build --outdir "${BUILD_DIR}"
-      - name: Check distribution metadata
+      - name: Locate built distributions
+        id: distributions
+        shell: bash
         env:
           BUILD_DIR: ${{ runner.temp }}/fastapi-xxljob-release-dist
         run: |
+          set -euo pipefail
+          mapfile -t wheels < <(find "${BUILD_DIR}" -maxdepth 1 -type f -name '*.whl' -printf '%f\n' | sort)
+          mapfile -t sdists < <(find "${BUILD_DIR}" -maxdepth 1 -type f -name '*.tar.gz' -printf '%f\n' | sort)
+          if [[ "${#wheels[@]}" -ne 1 || "${#sdists[@]}" -ne 1 ]]; then
+            echo "Expected exactly one wheel and one sdist in ${BUILD_DIR}." >&2
+            exit 1
+          fi
+          echo "wheel_name=${wheels[0]}" >> "${GITHUB_OUTPUT}"
+          echo "sdist_name=${sdists[0]}" >> "${GITHUB_OUTPUT}"
+      - name: Check distribution metadata
+        env:
+          BUILD_DIR: ${{ runner.temp }}/fastapi-xxljob-release-dist
+          WHEEL_NAME: ${{ steps.distributions.outputs.wheel_name }}
+          SDIST_NAME: ${{ steps.distributions.outputs.sdist_name }}
+        run: |
           python -m twine check \
-            "${BUILD_DIR}/fastapi_xxljob-0.1.0-py3-none-any.whl" \
-            "${BUILD_DIR}/fastapi_xxljob-0.1.0.tar.gz"
+            "${BUILD_DIR}/${WHEEL_NAME}" \
+            "${BUILD_DIR}/${SDIST_NAME}"
       - name: Check distribution contents
         env:
           BUILD_DIR: ${{ runner.temp }}/fastapi-xxljob-release-dist
@@ -65,12 +118,13 @@ jobs:
           BUILD_DIR: ${{ runner.temp }}/fastapi-xxljob-release-dist
           SMOKE_VENV: ${{ runner.temp }}/fastapi-xxljob-release-smoke-venv
           SMOKE_WORK: ${{ runner.temp }}/fastapi-xxljob-release-smoke-work
+          WHEEL_NAME: ${{ steps.distributions.outputs.wheel_name }}
         run: |
           rm -rf "${SMOKE_VENV}" "${SMOKE_WORK}"
           python -m venv "${SMOKE_VENV}"
           "${SMOKE_VENV}/bin/python" -m pip install --upgrade pip
           "${SMOKE_VENV}/bin/python" -m pip install \
-            "${BUILD_DIR}/fastapi_xxljob-0.1.0-py3-none-any.whl" \
+            "${BUILD_DIR}/${WHEEL_NAME}" \
             "httpx<0.29"
           "${SMOKE_VENV}/bin/python" -m pip check
           mkdir -p "${SMOKE_WORK}"

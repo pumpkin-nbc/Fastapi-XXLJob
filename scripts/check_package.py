@@ -1,4 +1,4 @@
-"""Validate the freshly built FastAPI-XXLJob 0.1.0 wheel and sdist."""
+"""Validate a freshly built FastAPI-XXLJob wheel and sdist."""
 
 from __future__ import annotations
 
@@ -23,7 +23,17 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DIST = ROOT / "dist"
 PROJECT_NAME = "fastapi-xxljob"
 NORMALIZED_NAME = "fastapi_xxljob"
-VERSION = "0.1.0"
+
+
+def _source_version() -> str:
+    text = (ROOT / "fastapi_xxljob" / "_version.py").read_text(encoding="utf-8")
+    match = re.search(r'^__version__\s*=\s*"([^"]+)"', text, flags=re.MULTILINE)
+    if match is None:
+        raise RuntimeError("Cannot read package version from fastapi_xxljob/_version.py")
+    return match.group(1)
+
+
+VERSION = _source_version()
 EXPECTED_WHEEL = f"{NORMALIZED_NAME}-{VERSION}-py3-none-any.whl"
 EXPECTED_SDIST = f"{NORMALIZED_NAME}-{VERSION}.tar.gz"
 EXPECTED_TOP_LEVEL = f"{NORMALIZED_NAME}-{VERSION}"
@@ -428,7 +438,7 @@ def validate_artifacts(dist_dir: Path) -> Tuple[List[str], int]:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Validate freshly built FastAPI-XXLJob 0.1.0 artifacts."
+        description=f"Validate freshly built FastAPI-XXLJob {VERSION} artifacts."
     )
     parser.add_argument(
         "--dist-dir",

@@ -47,15 +47,16 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
     return True
 
 
-def _assert_installed(source_root: Path) -> None:
+def _assert_installed(source_root: Path) -> str:
     module_path = Path(fastapi_xxljob.__file__).resolve()
     site_paths = [Path(item).resolve() for item in site.getsitepackages()]
     assert any(_is_relative_to(module_path, item) for item in site_paths)
     assert not _is_relative_to(
         module_path, (source_root / "fastapi_xxljob").resolve()
     )
-    assert fastapi_xxljob.__version__ == "0.1.0"
-    assert version("fastapi-xxljob") == "0.1.0"
+    installed_version = version("fastapi-xxljob")
+    assert fastapi_xxljob.__version__ == installed_version
+    return installed_version
 
 
 def _make_app(admin_url: str):
@@ -98,7 +99,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source-root", required=True, type=Path)
     args = parser.parse_args(argv)
-    _assert_installed(args.source_root)
+    installed_version = _assert_installed(args.source_root)
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), AdminHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -135,7 +136,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             text=True,
         )
         assert result.returncode == 0, result.stderr
-        assert "0.1.0" in result.stdout
+        assert installed_version in result.stdout
     finally:
         server.shutdown()
         server.server_close()

@@ -14,13 +14,14 @@ import pytest
 
 from scripts import check_package
 
-DIST_INFO = "fastapi_xxljob-0.1.0.dist-info"
+VERSION = check_package.VERSION
+DIST_INFO = f"fastapi_xxljob-{VERSION}.dist-info"
 RECORD = f"{DIST_INFO}/RECORD"
 METADATA = "\n".join(
     (
         "Metadata-Version: 2.4",
         "Name: fastapi-xxljob",
-        "Version: 0.1.0",
+        f"Version: {VERSION}",
         "Author: Pumpkin",
         "License-Expression: Apache-2.0",
         "Project-URL: Homepage, https://github.com/pumpkin-nbc/Fastapi-XXLJob",
@@ -43,7 +44,9 @@ def _hash(content: bytes, algorithm: str = "sha256") -> str:
 def _wheel_files() -> dict:
     return {
         "fastapi_xxljob/__init__.py": b"from ._version import __version__\n",
-        "fastapi_xxljob/_version.py": b'__version__ = "0.1.0"\n',
+        "fastapi_xxljob/_version.py": (
+            f'__version__ = "{VERSION}"\n'.encode("utf-8")
+        ),
         "fastapi_xxljob/py.typed": b"",
         f"{DIST_INFO}/METADATA": METADATA.encode("utf-8"),
         f"{DIST_INFO}/WHEEL": b"Wheel-Version: 1.0\nTag: py3-none-any\n",
@@ -194,7 +197,9 @@ def test_record_size_failures_are_rejected(tmp_path, size_value, expected):
 
 def _tar_files() -> dict:
     top = check_package.EXPECTED_TOP_LEVEL
-    metadata = b"Metadata-Version: 2.4\nName: fastapi-xxljob\nVersion: 0.1.0\n"
+    metadata = (
+        f"Metadata-Version: 2.4\nName: fastapi-xxljob\nVersion: {VERSION}\n"
+    ).encode("utf-8")
     return {
         f"{top}/PKG-INFO": metadata,
         f"{top}/pyproject.toml": b"[project]\nname='fastapi-xxljob'\n",
@@ -205,7 +210,9 @@ def _tar_files() -> dict:
         f"{top}/CHANGELOG.md": b"CHANGELOG\n",
         f"{top}/CHANGELOG.zh-CN.md": b"CHANGELOG\n",
         f"{top}/fastapi_xxljob/__init__.py": b"",
-        f"{top}/fastapi_xxljob/_version.py": b'__version__ = "0.1.0"\n',
+        f"{top}/fastapi_xxljob/_version.py": (
+            f'__version__ = "{VERSION}"\n'.encode("utf-8")
+        ),
         f"{top}/fastapi_xxljob/py.typed": b"",
         f"{top}/docs/publishing.md": b"publish\n",
         f"{top}/docs/publishing.zh-CN.md": b"publish\n",

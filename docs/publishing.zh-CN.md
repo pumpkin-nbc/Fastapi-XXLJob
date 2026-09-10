@@ -9,7 +9,9 @@
 请在新的空目录中构建，避免历史文件被误认为本轮制品：
 
 ```powershell
-$buildDir = Join-Path $env:TEMP "fastapi-xxljob-0.1.0-dist"
+$version = .venv\Scripts\python.exe -c `
+  'import runpy; print(runpy.run_path("fastapi_xxljob/_version.py")["__version__"])'
+$buildDir = Join-Path $env:TEMP "fastapi-xxljob-$version-dist"
 Remove-Item -LiteralPath $buildDir -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $buildDir | Out-Null
 .venv\Scripts\python.exe -m build --outdir $buildDir
@@ -18,8 +20,8 @@ New-Item -ItemType Directory -Path $buildDir | Out-Null
 目录中必须恰好包含：
 
 ```text
-fastapi_xxljob-0.1.0-py3-none-any.whl
-fastapi_xxljob-0.1.0.tar.gz
+fastapi_xxljob-X.Y.Z-py3-none-any.whl
+fastapi_xxljob-X.Y.Z.tar.gz
 ```
 
 ## 检查
@@ -27,9 +29,8 @@ fastapi_xxljob-0.1.0.tar.gz
 ```powershell
 .venv\Scripts\python.exe scripts\check_docs.py
 .venv\Scripts\python.exe scripts\check_package.py --dist-dir $buildDir
-.venv\Scripts\python.exe -m twine check `
-  (Join-Path $buildDir "fastapi_xxljob-0.1.0-py3-none-any.whl") `
-  (Join-Path $buildDir "fastapi_xxljob-0.1.0.tar.gz")
+$artifacts = @(Get-ChildItem -LiteralPath $buildDir -File)
+.venv\Scripts\python.exe -m twine check $artifacts.FullName
 ```
 
 项目 Validator 会检查 wheel RECORD 的哈希和大小、元数据、sdist 标准顶层 `PKG-INFO`、必需源码、类型与法律文件，并拒绝缓存和开发目录。
@@ -49,7 +50,7 @@ fastapi_xxljob-0.1.0.tar.gz
 - PyPI Environment：`pypi`
 - TestPyPI Environment：`testpypi`
 
-同时创建同名 GitHub Environments，并建议为 `pypi` 设置人工审批。只有发布 Job 拥有 `id-token: write`，构建和检查保持只读权限。
+同时创建同名 GitHub Environments。若需要 Tag 推送后完全自动发布，请不要配置 Required reviewers；若希望正式发布前人工把关，则可启用审批。只有发布 Job 拥有 `id-token: write`，构建和检查保持只读权限。
 
 ## 发布到 TestPyPI
 
@@ -59,8 +60,8 @@ fastapi_xxljob-0.1.0.tar.gz
 
 ```bash
 python -m pip install --index-url https://pypi.org/simple "fastapi>=0.124.4,<1.0" requests
-python -m pip install --index-url https://test.pypi.org/simple --no-deps fastapi-xxljob==0.1.0
-python -c "import fastapi_xxljob; assert fastapi_xxljob.__version__ == '0.1.0'"
+python -m pip install --index-url https://test.pypi.org/simple --no-deps fastapi-xxljob==X.Y.Z
+python -c "import fastapi_xxljob; print(fastapi_xxljob.__version__)"
 fastapi-xxljob --version
 ```
 
@@ -69,11 +70,12 @@ fastapi-xxljob --version
 等待 `develop` 与 `master` 的 Required CI 通过后，从属于 `master` 的提交创建发布 Tag：
 
 ```bash
-git tag -a v0.1.0 -m "Release 0.1.0"
-git push origin v0.1.0
+version="$(python -c 'import runpy; print(runpy.run_path("fastapi_xxljob/_version.py")["__version__"])')"
+git tag -a "v${version}" -m "Release ${version}"
+git push origin "v${version}"
 ```
 
-Tag 会触发 `Release` 工作流。它会校验 Tag、包版本、两份 Changelog 以及提交是否属于 `master`，随后等待 `pypi` Environment 审批并执行 Trusted Publishing。
+Tag 会触发 `Release` 工作流。它会先运行完整 Required CI，再校验 Tag、包版本、两份 Changelog、提交是否属于 `master`，以及动态发现的 wheel 和 sdist，随后执行 Trusted Publishing。若 `pypi` Environment 配置了 Required reviewers，发布会等待审批。
 
 ## 发布前
 
