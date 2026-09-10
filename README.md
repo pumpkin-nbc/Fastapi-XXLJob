@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-`fastapi-xxljob` is a typed FastAPI adapter for the XXL-JOB 2.4.1 executor protocol. Version 0.1.0 is protocol-compatible with Flask-XXLJob 0.4.0 while preserving FastAPI's async and lifespan model.
+`fastapi-xxljob` is a typed FastAPI adapter for the XXL-JOB 2.4.1 executor protocol. Version 0.1.0 supports FastAPI's asynchronous execution and ASGI lifespan model.
 
 ## Features
 

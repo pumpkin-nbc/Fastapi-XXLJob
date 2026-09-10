@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-`fastapi-xxljob` 是 XXL-JOB 2.4.1 执行器协议的类型化 FastAPI 适配器。0.1.0 版本与 Flask-XXLJob 0.4.0 的协议和能力对齐，同时遵循 FastAPI 的异步与 lifespan 模型。
+`fastapi-xxljob` 是 XXL-JOB 2.4.1 执行器协议的类型化 FastAPI 适配器。0.1.0 版本支持 FastAPI 异步执行和 ASGI lifespan 模型。
 
 ## 功能
 
